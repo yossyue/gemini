@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture Note AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Lecture Note AI 🎙️</h1>
+            <p>講義音声を自動で要約・文字起こし</p>
+        </header>
+
+        <section class="card">
+            <h2>設定</h2>
+            <div class="input-group">
+                <label for="api-key">Gemini API Key</label>
+                <input type="password" id="api-key" placeholder="AIzaSy...">
+            </div>
+            <button id="save-key-btn" class="btn btn-secondary">APIキーを保存</button>
+            <p id="key-status" class="status-msg"></p>
+        </section>
+
+        <section class="card">
+            <h2>音声入力</h2>
+            <div class="input-group">
+                <label for="lecture-name">講義名（任意）</label>
+                <input type="text" id="lecture-name" placeholder="例：第1回 経済学入門">
+            </div>
+            <div class="input-group">
+                <label for="audio-file">音声ファイル</label>
+                <input type="file" id="audio-file" accept="audio/*">
+            </div>
+            <button id="generate-btn" class="btn btn-primary">ノートを生成する</button>
+            
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <p>AIが音声を解析しています...</p>
+            </div>
+        </section>
+
+        <section id="output-area" class="card hidden">
+            <h2>生成結果</h2>
+            
+            <div class="result-box">
+                <div class="result-header">
+                    <h3>3行要約</h3>
+                    <button class="btn-copy" data-target="summary-content">コピー</button>
+                </div>
+                <div id="summary-content" class="result-content"></div>
+            </div>
+
+            <div class="result-box">
+                <div class="result-header">
+                    <h3>要点（3〜5個）</h3>
+                    <button class="btn-copy" data-target="points-content">コピー</button>
+                </div>
+                <div id="points-content" class="result-content"></div>
+            </div>
+
+            <div class="result-box">
+                <div class="result-header">
+                    <h3>文字起こし全文</h3>
+                    <button class="btn-copy" data-target="transcript-content">コピー</button>
+                </div>
+                <div id="transcript-content" class="result-content"></div>
+            </div>
+        </section>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
