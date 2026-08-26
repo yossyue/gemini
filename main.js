@@ -25,8 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            console.log("最新のURLでGemini APIへ通信中...");
-            const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+            console.log("Gemini APIへ通信中...");
+            const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
             
             const response = await fetch(testUrl, {
                 method: 'POST',
@@ -74,8 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // 音声ファイルをBase64テキスト形式に変換
             const base64Data = await fileToBase64(file);
             
-            // v1beta エンドポイントを使用（404エラー回避）
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+            // 確実動作のエンドポイントとモデル
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
             
             // AIへの構造化プロンプト
             const lectureTitlePrompt = lectureName ? `講義名: 「${lectureName}」\n` : "";
