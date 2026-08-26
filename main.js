@@ -25,7 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            console.log("Gemini APIへ通信中...");
+            console.log("Gemini APIへ通信テスト中...");
+            // 安定版エンドポイント指定
             const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
             
             const response = await fetch(testUrl, {
@@ -39,14 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 localStorage.setItem('gemini_api_key', key);
                 saveStatus.classList.remove('hidden');
-                alert('通信成功！ついにアプリ側からも繋がりました！');
+                alert('通信成功！キーを保存しました。');
                 setTimeout(() => saveStatus.classList.add('hidden'), 3000);
             } else {
                 throw new Error(`HTTPステータス: ${response.status}`);
             }
         } catch (error) {
             console.error("❌ 疎通テスト失敗:", error);
-            alert(`通信に失敗しました。キーが正しいか確認してください。\nエラー内容: ${error.message}`);
+            alert(`通信に失敗しました。キーを確認してください。\nエラー内容: ${error.message}`);
         }
     });
 
@@ -71,10 +72,10 @@ document.addEventListener('DOMContentLoaded', () => {
         outputArea.classList.add('hidden');
 
         try {
-            // 音声ファイルをBase64テキスト形式に変換
+            // 音声ファイルをBase64形式に変換
             const base64Data = await fileToBase64(file);
             
-            // 確実動作のエンドポイントとモデル
+            // 安定動作モデルへURL固定
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
             
             // AIへの構造化プロンプト
@@ -90,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
 ###文字起こし###
 （ここに音声の書き起こし全文を出力してください。聞き取りにくい部分は前後の文脈から自然に補完してください。）`;
 
-            // マルチモーダルペイロードの送信
+            // リクエスト送信
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -116,22 +117,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             const aiResponseText = data.candidates[0].content.parts[0].text;
 
-            // AIからの構造化テキストを分解して画面に表示
+            // AIからの結果をパースして画面表示
             parseAndDisplayResult(aiResponseText);
-
-            // 結果を表示
             outputArea.classList.remove('hidden');
 
         } catch (error) {
             console.error("❌ エラー発生:", error);
-            alert(`エラーが発生しました: ${error.message}\nファイルサイズが大きすぎるか、非対応形式の可能性があります。`);
+            alert(`エラーが発生しました: ${error.message}\nAPIキーが有効か、またはファイル形式をご確認ください。`);
         } finally {
             loadingDiv.classList.add('hidden');
             generateBtn.disabled = false;
         }
     });
 
-    // 補助関数：音声ファイルをBase64に変換
+    // 音声ファイルをBase64化する関数
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -144,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 補助関数：AIテキストを###タグでパースして各カードに分配
+    // AIの返答テキストを分割して画面挿入する関数
     function parseAndDisplayResult(text) {
         const summaryContent = document.getElementById('summary-content');
         const pointsContent = document.getElementById('points-content');
