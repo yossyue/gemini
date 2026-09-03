@@ -17,10 +17,14 @@
             <h2>設定</h2>
             <div class="input-group">
                 <label for="api-key">Gemini API Key</label>
-                <input type="password" id="api-key" placeholder="AIzaSy...">
+                <input type="password" id="api-key" placeholder="AIzaSy..." autocomplete="off">
+                <p class="hint">
+                    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>
+                    で無料取得できます。キーはこのブラウザ内（localStorage）にのみ保存されます。
+                </p>
             </div>
             <button id="save-key-btn" class="btn btn-secondary">APIキーを保存</button>
-            <p id="key-status" class="status-msg"></p>
+            <p id="key-status" class="status-msg hidden" aria-live="polite"></p>
         </section>
 
         <section class="card">
@@ -31,19 +35,22 @@
             </div>
             <div class="input-group">
                 <label for="audio-file">音声ファイル</label>
-                <input type="file" id="audio-file" accept="*/*">
+                <input type="file" id="audio-file" accept="audio/*">
+                <p class="hint">mp3 / wav / m4a / aac / ogg / flac など。長時間の講義は30〜40分ごとに分割すると安定します。</p>
             </div>
             <button id="generate-btn" class="btn btn-primary">ノートを生成する</button>
-            
-            <div id="loading" class="hidden">
+
+            <div id="loading" class="hidden" aria-live="polite">
                 <div class="spinner"></div>
-                <p>AIが音声を解析しています...</p>
+                <p id="loading-text">AIが音声を解析しています...</p>
             </div>
         </section>
 
         <section id="output-area" class="card hidden">
             <h2>生成結果</h2>
-            
+
+            <p id="output-warning" class="warning-banner hidden"></p>
+
             <div class="result-box">
                 <div class="result-header">
                     <h3>3行要約</h3>
@@ -70,6 +77,6 @@
         </section>
     </div>
 
-    <script src="main.js"></script>
+    <script src="main.js" defer></script>
 </body>
 </html>
