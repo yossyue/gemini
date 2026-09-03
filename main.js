@@ -42,13 +42,14 @@ els.saveKeyBtn.addEventListener('click', async () => {
     setKeyStatus('APIキーを入力してください。', 'error');
     return;
   }
-  if (!/^AIza[0-9A-Za-z_-]{20,}$/.test(key)) {
-    setKeyStatus('APIキーの形式が正しくないようです（通常「AIza」で始まります）。', 'error');
-    return;
-  }
-
   els.saveKeyBtn.disabled = true;
-  setKeyStatus('通信を確認しています...', 'info');
+  const looksUnusual = !/^AIza[0-9A-Za-z_-]{10,}$/.test(key);
+  setKeyStatus(
+    looksUnusual
+      ? '見慣れない形式ですが、通信を確認しています...'
+      : '通信を確認しています...',
+    'info'
+  );
   try {
     const res = await fetch(
       `${API_BASE}/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`,
