@@ -21,6 +21,8 @@ const els = {
   loadingText: $('loading-text'),
   outputArea: $('output-area'),
   warning: $('output-warning'),
+  exportFormat: $('export-format'),
+  exportBtn: $('export-btn'),
   summary: $('summary-content'),
   points: $('points-content'),
   transcript: $('transcript-content'),
@@ -281,6 +283,37 @@ document.querySelectorAll('.btn-copy').forEach((btn) => {
     }
   });
 });
+
+/* ===== まとめてダウンロード ===== */
+els.exportBtn.addEventListener('click', () => {
+  const sections = [
+    ['3行要約', els.summary.textContent],
+    ['要点', els.points.textContent],
+    ['文字起こし全文', els.transcript.textContent],
+  ];
+  const format = els.exportFormat.value;
+  const isMd = format === 'md';
+  const content = sections
+    .map(([heading, body]) => (isMd ? `# ${heading}\n\n${body}` : `【${heading}】\n${body}`))
+    .join(isMd ? '\n\n---\n\n' : '\n\n----------------\n\n');
+
+  const blob = new Blob([content], {
+    type: `${isMd ? 'text/markdown' : 'text/plain'};charset=utf-8`,
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${sanitizeFilename(els.lectureName.value.trim())}.${isMd ? 'md' : 'txt'}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+function sanitizeFilename(name) {
+  const cleaned = (name || '').replace(/[\\/:*?"<>|]/g, '_').trim();
+  return cleaned.slice(0, 80) || 'lecture-note';
+}
 
 /* ===== ユーティリティ ===== */
 // 503(過負荷)/429(レート制限)は一時的なことが多いため、指数バックオフで自動リトライする
