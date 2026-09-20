@@ -151,7 +151,7 @@ async function generateNote(key, lectureName, audioPart) {
 ###文字起こし###
 （音声の書き起こし全文。聞き取りにくい部分は前後の文脈から自然に補完する）`;
 
-  const res = await fetch(
+  const res = await fetchWithRetry(
     `${API_BASE}/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`,
     {
       method: 'POST',
@@ -160,6 +160,10 @@ async function generateNote(key, lectureName, audioPart) {
         contents: [{ parts: [{ text: prompt }, audioPart] }],
         generationConfig: { temperature: 0.3, maxOutputTokens: MAX_OUTPUT_TOKENS },
       }),
+    },
+    {
+      onRetry: (n, total) =>
+        setLoading(`Geminiが混雑しています。再試行しています... (${n}/${total})`),
     }
   );
   if (!res.ok) throw new Error(await describeError(res));
@@ -279,6 +283,18 @@ document.querySelectorAll('.btn-copy').forEach((btn) => {
 });
 
 /* ===== ユーティリティ ===== */
+// 503(過負荷)/429(レート制限)は一時的なことが多いため、指数バックオフで自動リトライする
+async function fetchWithRetry(url, options, { retries = 3, baseDelayMs = 3000, onRetry } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, options);
+    if (res.ok || attempt >= retries || (res.status !== 503 && res.status !== 429)) {
+      return res;
+    }
+    onRetry?.(attempt + 1, retries);
+    await sleep(baseDelayMs * 2 ** attempt);
+  }
+}
+
 async function describeError(res) {
   let msg = '';
   try {
@@ -291,6 +307,7 @@ async function describeError(res) {
     if (res.status === 404) msg = 'モデルが見つかりません。';
     else if (res.status === 403) msg = 'APIキーが無効か、権限がありません。';
     else if (res.status === 429) msg = 'レート上限に達しました。しばらく待って再試行してください。';
+    else if (res.status === 503) msg = 'Geminiが混雑しています。しばらく待って再試行してください。';
   }
   return `HTTP ${res.status}${msg ? `: ${msg}` : ''}`;
 }
