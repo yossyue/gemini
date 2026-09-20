@@ -121,6 +121,15 @@ input[type="file"] {
     color: var(--secondary-color);
 }
 
+.output-lecture-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
 /* ダウンロード行 */
 .export-row {
     display: flex;

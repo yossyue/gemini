@@ -20,6 +20,7 @@ const els = {
   loading: $('loading'),
   loadingText: $('loading-text'),
   outputArea: $('output-area'),
+  outputLectureName: $('output-lecture-name'),
   warning: $('output-warning'),
   exportFormat: $('export-format'),
   exportBtn: $('export-btn'),
@@ -141,17 +142,17 @@ function mimeOf(file) {
 
 async function generateNote(key, lectureName, audioPart) {
   const titleLine = lectureName ? `講義名: 「${lectureName}」\n\n` : '';
-  const prompt = `${titleLine}添付した講義音声を解析し、日本語で以下のフォーマット通りに出力してください。
+  const prompt = `${titleLine}添付した音声を解析し、以下のフォーマット通りに出力してください。
 見出しは必ず「###要約###」「###要点###」「###文字起こし###」という文字列をそれぞれ独立した行に書いてください。見出しにマークダウン記号（#, *, - など）は使わないでください。
 
 ###要約###
-・（講義全体の内容を3行の箇条書きで。各行の先頭は「・」）
+（日本語で。講義全体の内容を3行の箇条書きに。各行の先頭は「・」）
 
 ###要点###
-1. （重要ポイントを3〜5個。各行の先頭を「1.」「2.」…の連番にする）
+（日本語で。重要ポイントを3〜5個の箇条書きに。各行の先頭を「1.」「2.」…の連番にする）
 
 ###文字起こし###
-（音声の書き起こし全文。聞き取りにくい部分は前後の文脈から自然に補完する）`;
+（音声で実際に話されている言語のまま、一字一句を書き起こす。日本語への翻訳・要約・言い換えは絶対に行わない。話されている言語が英語など日本語以外でも、その言語のまま出力する。聞き取りにくい部分のみ、前後の文脈から同じ言語で自然に補完する。音声内で言語が切り替わる場合は、その通りに切り替えて書き起こす）`;
 
   const res = await fetchWithRetry(
     `${API_BASE}/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`,
@@ -256,6 +257,10 @@ function render({ text, truncated }) {
   els.points.textContent = pick('要点', ['要約', '文字起こし']) || '（抽出に失敗しました）';
   els.transcript.textContent = pick('文字起こし', ['要約', '要点']) || text;
 
+  const lectureName = els.lectureName.value.trim();
+  els.outputLectureName.textContent = lectureName;
+  els.outputLectureName.classList.toggle('hidden', !lectureName);
+
   els.warning.classList.toggle('hidden', !truncated);
   if (truncated) {
     els.warning.textContent =
@@ -286,6 +291,7 @@ document.querySelectorAll('.btn-copy').forEach((btn) => {
 
 /* ===== まとめてダウンロード ===== */
 els.exportBtn.addEventListener('click', () => {
+  const lectureName = els.lectureName.value.trim();
   const sections = [
     ['3行要約', els.summary.textContent],
     ['要点', els.points.textContent],
@@ -293,9 +299,12 @@ els.exportBtn.addEventListener('click', () => {
   ];
   const format = els.exportFormat.value;
   const isMd = format === 'md';
-  const content = sections
-    .map(([heading, body]) => (isMd ? `# ${heading}\n\n${body}` : `【${heading}】\n${body}`))
-    .join(isMd ? '\n\n---\n\n' : '\n\n----------------\n\n');
+  const titleBlock = lectureName ? (isMd ? `# ${lectureName}\n\n` : `${lectureName}\n\n`) : '';
+  const content =
+    titleBlock +
+    sections
+      .map(([heading, body]) => (isMd ? `## ${heading}\n\n${body}` : `【${heading}】\n${body}`))
+      .join(isMd ? '\n\n---\n\n' : '\n\n----------------\n\n');
 
   const blob = new Blob([content], {
     type: `${isMd ? 'text/markdown' : 'text/plain'};charset=utf-8`,
