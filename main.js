@@ -88,7 +88,7 @@ els.generateBtn.addEventListener('click', async () => {
     return;
   }
   if (!file) {
-    alert('音声ファイルを選択してください。');
+    alert('音声・動画ファイルを選択してください。');
     return;
   }
 
@@ -96,7 +96,7 @@ els.generateBtn.addEventListener('click', async () => {
   els.outputArea.classList.add('hidden');
   els.warning.classList.add('hidden');
   els.loading.classList.remove('hidden');
-  setLoading('音声を準備しています...');
+  setLoading('ファイルを準備しています...');
 
   try {
     const audioPart =
@@ -105,7 +105,7 @@ els.generateBtn.addEventListener('click', async () => {
         : { inlineData: { mimeType: mimeOf(file), data: await fileToBase64(file) } };
 
     const includeTranscript = els.includeTranscript.checked;
-    setLoading('AIが音声を解析しています（数分かかることがあります）...');
+    setLoading('AIが解析しています（数分かかることがあります）...');
     const result = await generateNote(key, lectureName, audioPart, includeTranscript);
     render(result, includeTranscript);
   } catch (err) {
@@ -121,8 +121,18 @@ function setLoading(msg) {
   els.loadingText.textContent = msg;
 }
 
+// Gemini APIが受け付けるmime表記に正規化する。ブラウザ報告のfile.typeは環境で
+// 表記揺れがある（例: .mov→video/quicktime, .m4a→audio/x-m4a）ため、
+// 拡張子から公式ドキュメント記載の文字列に正規化するのを基本とする。
 function mimeOf(file) {
   const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const t = (file.type || '').toLowerCase();
+
+  // .mp4 / .webm は音声(録音アプリの出力等)・動画どちらもあり得るため、
+  // ブラウザ報告のtypeで判別する
+  if (ext === 'mp4') return t.startsWith('audio/') ? 'audio/mp4' : 'video/mp4';
+  if (ext === 'webm') return t.startsWith('audio/') ? 'audio/webm' : 'video/webm';
+
   const map = {
     mp3: 'audio/mp3',
     wav: 'audio/wav',
@@ -132,15 +142,22 @@ function mimeOf(file) {
     ogg: 'audio/ogg',
     oga: 'audio/ogg',
     flac: 'audio/flac',
-    m4a: 'audio/mp4',
-    mp4: 'audio/mp4',
-    opus: 'audio/opus',
-    webm: 'audio/webm',
+    m4a: 'audio/mp4', // 非公式だが実用上動作する
+    mpeg: 'video/mpeg',
+    mpg: 'video/mpeg',
+    mov: 'video/mov',
+    avi: 'video/avi',
+    flv: 'video/x-flv',
+    wmv: 'video/wmv',
+    '3gp': 'video/3gpp',
   };
   if (map[ext]) return map[ext];
-  const t = (file.type || '').toLowerCase();
-  if (t === 'audio/mpeg') return 'audio/mp3';
-  return t || 'audio/mp3';
+
+  // 未知の拡張子はブラウザ報告のtypeにフォールバック
+  if (t.startsWith('audio/') || t.startsWith('video/')) {
+    return t === 'audio/mpeg' ? 'audio/mp3' : t;
+  }
+  return 'audio/mp3';
 }
 
 async function generateNote(key, lectureName, audioPart, includeTranscript) {
@@ -149,7 +166,7 @@ async function generateNote(key, lectureName, audioPart, includeTranscript) {
     ? '「###要約###」「###要点###」「###文字起こし###」'
     : '「###要約###」「###要点###」';
 
-  let prompt = `${titleLine}添付した音声を解析し、以下のフォーマット通りに出力してください。
+  let prompt = `${titleLine}添付した音声・動画で話されている内容を解析し、以下のフォーマット通りに出力してください。
 見出しは必ず${headingList}という文字列をそれぞれ独立した行に書いてください。見出しにマークダウン記号（#, *, - など）は使わないでください。
 
 ###要約###
@@ -162,7 +179,7 @@ async function generateNote(key, lectureName, audioPart, includeTranscript) {
     ? `
 
 ###文字起こし###
-（音声で実際に話されている言語のまま、一字一句を書き起こす。日本語への翻訳・要約・言い換えは絶対に行わない。話されている言語が英語など日本語以外でも、その言語のまま出力する。聞き取りにくい部分のみ、前後の文脈から同じ言語で自然に補完する。音声内で言語が切り替わる場合は、その通りに切り替えて書き起こす）`
+（実際に話されている言語のまま、一字一句を書き起こす。日本語への翻訳・要約・言い換えは絶対に行わない。話されている言語が英語など日本語以外でも、その言語のまま出力する。聞き取りにくい部分のみ、前後の文脈から同じ言語で自然に補完する。話されている言語が途中で切り替わる場合は、その通りに切り替えて書き起こす）`
     : `
 
 文字起こしは不要です。###文字起こし###の見出しや本文は出力しないでください。`;
@@ -190,7 +207,7 @@ async function generateNote(key, lectureName, audioPart, includeTranscript) {
   }
   const cand = data.candidates?.[0];
   if (!cand) {
-    throw new Error('AIから有効な応答が返りませんでした。音声が長すぎる可能性があります。');
+    throw new Error('AIから有効な応答が返りませんでした。ファイルが長すぎる可能性があります。');
   }
   const text = (cand.content?.parts || [])
     .map((p) => p.text || '')
@@ -201,9 +218,9 @@ async function generateNote(key, lectureName, audioPart, includeTranscript) {
   return { text, truncated: cand.finishReason === 'MAX_TOKENS' };
 }
 
-/* ===== File API（大きい音声ファイル用） ===== */
+/* ===== File API（大きいファイル用） ===== */
 async function uploadViaFileApi(file, key) {
-  setLoading('音声ファイルをアップロードしています...');
+  setLoading('ファイルをアップロードしています...');
   const startRes = await fetch(
     `${API_BASE}/upload/v1beta/files?key=${encodeURIComponent(key)}`,
     {
@@ -242,7 +259,7 @@ async function uploadViaFileApi(file, key) {
 
   // state が ACTIVE になるまで待機
   for (let i = 0; info.state === 'PROCESSING' && i < 100; i++) {
-    setLoading(`音声を処理しています... (${i * 3}秒経過)`);
+    setLoading(`処理しています... (${i * 3}秒経過)`);
     await sleep(3000);
     const poll = await fetch(
       `${API_BASE}/v1beta/${info.name}?key=${encodeURIComponent(key)}`
@@ -251,7 +268,7 @@ async function uploadViaFileApi(file, key) {
     info = await poll.json();
   }
   if (info.state !== 'ACTIVE') {
-    throw new Error(`音声ファイルの処理に失敗しました（state: ${info.state}）。`);
+    throw new Error(`ファイルの処理に失敗しました（state: ${info.state}）。`);
   }
   return { mimeType: info.mimeType, fileUri: info.uri };
 }
@@ -281,7 +298,7 @@ function render({ text, truncated }, includeTranscript) {
   els.warning.classList.toggle('hidden', !truncated);
   if (truncated) {
     els.warning.textContent =
-      '⚠️ 出力が上限に達し、文字起こしが途中で切れている可能性があります。音声を短く分割するか、「文字起こし全文も生成する」のチェックを外して再度お試しください。';
+      '⚠️ 出力が上限に達し、文字起こしが途中で切れている可能性があります。ファイルを短く分割するか、「文字起こし全文も生成する」のチェックを外して再度お試しください。';
   }
 
   els.outputArea.classList.remove('hidden');

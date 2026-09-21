@@ -10,7 +10,7 @@
     <div class="container">
         <header>
             <h1>Lecture Note AI 🎙️</h1>
-            <p>講義音声を自動で要約・文字起こし</p>
+            <p>講義音声・動画を自動で要約・文字起こし</p>
         </header>
 
         <section class="card">
@@ -28,15 +28,15 @@
         </section>
 
         <section class="card">
-            <h2>音声入力</h2>
+            <h2>音声・動画入力</h2>
             <div class="input-group">
                 <label for="lecture-name">講義名（任意）</label>
                 <input type="text" id="lecture-name" placeholder="例：第1回 経済学入門">
             </div>
             <div class="input-group">
-                <label for="audio-file">音声ファイル</label>
-                <input type="file" id="audio-file" accept="audio/*">
-                <p class="hint">mp3 / wav / m4a / aac / ogg / flac など。</p>
+                <label for="audio-file">音声・動画ファイル</label>
+                <input type="file" id="audio-file" accept="audio/*,video/*">
+                <p class="hint">音声: mp3 / wav / m4a / aac / ogg / flac など。動画: mp4 / mov / webm など（話されている内容を解析します）。</p>
             </div>
             <div class="input-group">
                 <label class="checkbox-label">
@@ -49,7 +49,7 @@
 
             <div id="loading" class="hidden" aria-live="polite">
                 <div class="spinner"></div>
-                <p id="loading-text">AIが音声を解析しています...</p>
+                <p id="loading-text">AIが音声・動画を解析しています...</p>
             </div>
         </section>
 
