@@ -36,7 +36,14 @@
             <div class="input-group">
                 <label for="audio-file">音声ファイル</label>
                 <input type="file" id="audio-file" accept="audio/*">
-                <p class="hint">mp3 / wav / m4a / aac / ogg / flac など。長時間の講義は30〜40分ごとに分割すると安定します。</p>
+                <p class="hint">mp3 / wav / m4a / aac / ogg / flac など。</p>
+            </div>
+            <div class="input-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="include-transcript" checked>
+                    文字起こし全文も生成する
+                </label>
+                <p class="hint">オフにすると出力が要約・要点だけになり、120分など長時間の講義も一括処理しやすくなります。</p>
             </div>
             <button id="generate-btn" class="btn btn-primary">ノートを生成する</button>
 
@@ -77,7 +84,7 @@
                 <div id="points-content" class="result-content"></div>
             </div>
 
-            <div class="result-box">
+            <div class="result-box" id="transcript-box">
                 <div class="result-header">
                     <h3>文字起こし全文</h3>
                     <button class="btn-copy" data-target="transcript-content">コピー</button>

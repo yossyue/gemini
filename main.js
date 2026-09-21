@@ -16,6 +16,7 @@ const els = {
   keyStatus: $('key-status'),
   lectureName: $('lecture-name'),
   audioFile: $('audio-file'),
+  includeTranscript: $('include-transcript'),
   generateBtn: $('generate-btn'),
   loading: $('loading'),
   loadingText: $('loading-text'),
@@ -27,6 +28,7 @@ const els = {
   summary: $('summary-content'),
   points: $('points-content'),
   transcript: $('transcript-content'),
+  transcriptBox: $('transcript-box'),
 };
 
 /* ===== APIキー ===== */
@@ -102,9 +104,10 @@ els.generateBtn.addEventListener('click', async () => {
         ? { fileData: await uploadViaFileApi(file, key) }
         : { inlineData: { mimeType: mimeOf(file), data: await fileToBase64(file) } };
 
+    const includeTranscript = els.includeTranscript.checked;
     setLoading('AIが音声を解析しています（数分かかることがあります）...');
-    const result = await generateNote(key, lectureName, audioPart);
-    render(result);
+    const result = await generateNote(key, lectureName, audioPart, includeTranscript);
+    render(result, includeTranscript);
   } catch (err) {
     console.error(err);
     alert(`エラーが発生しました:\n${err.message}`);
@@ -140,19 +143,29 @@ function mimeOf(file) {
   return t || 'audio/mp3';
 }
 
-async function generateNote(key, lectureName, audioPart) {
+async function generateNote(key, lectureName, audioPart, includeTranscript) {
   const titleLine = lectureName ? `講義名: 「${lectureName}」\n\n` : '';
-  const prompt = `${titleLine}添付した音声を解析し、以下のフォーマット通りに出力してください。
-見出しは必ず「###要約###」「###要点###」「###文字起こし###」という文字列をそれぞれ独立した行に書いてください。見出しにマークダウン記号（#, *, - など）は使わないでください。
+  const headingList = includeTranscript
+    ? '「###要約###」「###要点###」「###文字起こし###」'
+    : '「###要約###」「###要点###」';
+
+  let prompt = `${titleLine}添付した音声を解析し、以下のフォーマット通りに出力してください。
+見出しは必ず${headingList}という文字列をそれぞれ独立した行に書いてください。見出しにマークダウン記号（#, *, - など）は使わないでください。
 
 ###要約###
 （日本語で。講義全体の内容を3行の箇条書きに。各行の先頭は「・」）
 
 ###要点###
-（日本語で。重要ポイントを3〜5個の箇条書きに。各行の先頭を「1.」「2.」…の連番にする）
+（日本語で。重要ポイントを3〜5個の箇条書きに。各行の先頭を「1.」「2.」…の連番にする）`;
+
+  prompt += includeTranscript
+    ? `
 
 ###文字起こし###
-（音声で実際に話されている言語のまま、一字一句を書き起こす。日本語への翻訳・要約・言い換えは絶対に行わない。話されている言語が英語など日本語以外でも、その言語のまま出力する。聞き取りにくい部分のみ、前後の文脈から同じ言語で自然に補完する。音声内で言語が切り替わる場合は、その通りに切り替えて書き起こす）`;
+（音声で実際に話されている言語のまま、一字一句を書き起こす。日本語への翻訳・要約・言い換えは絶対に行わない。話されている言語が英語など日本語以外でも、その言語のまま出力する。聞き取りにくい部分のみ、前後の文脈から同じ言語で自然に補完する。音声内で言語が切り替わる場合は、その通りに切り替えて書き起こす）`
+    : `
+
+文字起こしは不要です。###文字起こし###の見出しや本文は出力しないでください。`;
 
   const res = await fetchWithRetry(
     `${API_BASE}/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(key)}`,
@@ -244,7 +257,7 @@ async function uploadViaFileApi(file, key) {
 }
 
 /* ===== 結果表示 ===== */
-function render({ text, truncated }) {
+function render({ text, truncated }, includeTranscript) {
   const pick = (name, others) => {
     const re = new RegExp(
       `###\\s*${name}\\s*###([\\s\\S]*?)(?=###\\s*(?:${others.join('|')})\\s*###|$)`
@@ -255,7 +268,11 @@ function render({ text, truncated }) {
 
   els.summary.textContent = pick('要約', ['要点', '文字起こし']) || '（抽出に失敗しました）';
   els.points.textContent = pick('要点', ['要約', '文字起こし']) || '（抽出に失敗しました）';
-  els.transcript.textContent = pick('文字起こし', ['要約', '要点']) || text;
+
+  els.transcriptBox.classList.toggle('hidden', !includeTranscript);
+  els.transcript.textContent = includeTranscript
+    ? pick('文字起こし', ['要約', '要点']) || text
+    : '';
 
   const lectureName = els.lectureName.value.trim();
   els.outputLectureName.textContent = lectureName;
@@ -264,7 +281,7 @@ function render({ text, truncated }) {
   els.warning.classList.toggle('hidden', !truncated);
   if (truncated) {
     els.warning.textContent =
-      '⚠️ 出力が上限に達し、文字起こしが途中で切れている可能性があります。音声を短く分割して再度お試しください。';
+      '⚠️ 出力が上限に達し、文字起こしが途中で切れている可能性があります。音声を短く分割するか、「文字起こし全文も生成する」のチェックを外して再度お試しください。';
   }
 
   els.outputArea.classList.remove('hidden');
@@ -295,8 +312,10 @@ els.exportBtn.addEventListener('click', () => {
   const sections = [
     ['3行要約', els.summary.textContent],
     ['要点', els.points.textContent],
-    ['文字起こし全文', els.transcript.textContent],
   ];
+  if (!els.transcriptBox.classList.contains('hidden')) {
+    sections.push(['文字起こし全文', els.transcript.textContent]);
+  }
   const format = els.exportFormat.value;
   const isMd = format === 'md';
   const titleBlock = lectureName ? (isMd ? `# ${lectureName}\n\n` : `${lectureName}\n\n`) : '';
